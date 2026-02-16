@@ -1,0 +1,7 @@
+                           PRE .s3compat_uploads/
+                           PRE data/
+                           PRE mmsegmentation/
+                           PRE outputs/
+                           PRE pretrained_models/
+                           PRE trained_models/
+2025-09-10 15:59:54       2703 requirements.txt
