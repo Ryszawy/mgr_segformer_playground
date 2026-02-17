@@ -7,8 +7,7 @@ csv_out  = Path(sys.argv[3])
 
 text = log_path.read_text(errors="ignore").splitlines()
 
-# Szukamy końcowej linii z metrykami:
-# Iter(test) [500/500]    aAcc: 95.9200  mIoU: 76.5400  mAcc: 83.8600  data_time: 0.0081  time: 0.052
+# Final metrics line
 final_re = re.compile(r"aAcc:\s*([0-9.]+)\s+mIoU:\s*([0-9.]+)\s+mAcc:\s*([0-9.]+).*?time:\s*([0-9.]+)")
 aAcc=mIoU=mAcc=time_it=None
 for line in reversed(text):
@@ -17,8 +16,16 @@ for line in reversed(text):
         aAcc, mIoU, mAcc, time_it = m.groups()
         break
 
-# Per-class table (IoU/Acc)
-# Wyciągamy wiersze w stylu: | road | 98.03 | 98.95 |
+# Peak memory from progress lines (e.g. "memory: 953")
+mem_re = re.compile(r"\bmemory:\s*([0-9]+)\b")
+mem_vals = []
+for line in text:
+    m = mem_re.search(line)
+    if m:
+        mem_vals.append(int(m.group(1)))
+max_mem_mb = max(mem_vals) if mem_vals else None
+
+# Per-class table
 row_re = re.compile(r"^\|\s*([^|]+?)\s*\|\s*([0-9.]+)\s*\|\s*([0-9.]+)\s*\|")
 per_class = []
 in_table = False
@@ -39,14 +46,16 @@ result = {
     "mAcc": float(mAcc) if mAcc else None,
     "time_per_iter_s": float(time_it) if time_it else None,
     "approx_fps_batch1": (1.0/float(time_it)) if time_it else None,
+    "peak_mem_mb": max_mem_mb,
     "per_class": per_class,
 }
 
 json_out.write_text(json.dumps(result, indent=2))
+
 with csv_out.open("w", newline="") as f:
     w = csv.writer(f)
     w.writerow(["metric", "value"])
-    for k in ["mIoU","mAcc","aAcc","time_per_iter_s","approx_fps_batch1"]:
+    for k in ["mIoU","mAcc","aAcc","time_per_iter_s","approx_fps_batch1","peak_mem_mb"]:
         w.writerow([k, result.get(k)])
     w.writerow([])
     w.writerow(["class","IoU","Acc"])
