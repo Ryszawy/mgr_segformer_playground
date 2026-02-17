@@ -1,0 +1,105 @@
+{
+  "log": "/workspace/mgr_segformer_playground/results/cityscapes/1024x1024/b0/logs/segformer_b0_cityscapes_1024x1024_20260217_195045.log",
+  "aAcc": 95.92,
+  "mIoU": 76.54,
+  "mAcc": 83.86,
+  "time_per_iter_s": 0.008,
+  "approx_fps_batch1": 125.0,
+  "per_class": [
+    {
+      "class": "road",
+      "IoU": 98.03,
+      "Acc": 98.95
+    },
+    {
+      "class": "sidewalk",
+      "IoU": 84.03,
+      "Acc": 91.92
+    },
+    {
+      "class": "building",
+      "IoU": 92.23,
+      "Acc": 96.73
+    },
+    {
+      "class": "wall",
+      "IoU": 58.76,
+      "Acc": 65.28
+    },
+    {
+      "class": "fence",
+      "IoU": 56.82,
+      "Acc": 66.19
+    },
+    {
+      "class": "pole",
+      "IoU": 62.59,
+      "Acc": 72.51
+    },
+    {
+      "class": "traffic light",
+      "IoU": 69.82,
+      "Acc": 81.0
+    },
+    {
+      "class": "traffic sign",
+      "IoU": 77.72,
+      "Acc": 84.88
+    },
+    {
+      "class": "vegetation",
+      "IoU": 92.55,
+      "Acc": 96.64
+    },
+    {
+      "class": "terrain",
+      "IoU": 64.13,
+      "Acc": 73.71
+    },
+    {
+      "class": "sky",
+      "IoU": 94.98,
+      "Acc": 98.22
+    },
+    {
+      "class": "person",
+      "IoU": 80.72,
+      "Acc": 90.19
+    },
+    {
+      "class": "rider",
+      "IoU": 57.39,
+      "Acc": 69.62
+    },
+    {
+      "class": "car",
+      "IoU": 94.33,
+      "Acc": 97.59
+    },
+    {
+      "class": "truck",
+      "IoU": 69.36,
+      "Acc": 73.78
+    },
+    {
+      "class": "bus",
+      "IoU": 83.88,
+      "Acc": 89.76
+    },
+    {
+      "class": "train",
+      "IoU": 75.65,
+      "Acc": 81.34
+    },
+    {
+      "class": "motorcycle",
+      "IoU": 64.94,
+      "Acc": 77.39
+    },
+    {
+      "class": "bicycle",
+      "IoU": 76.27,
+      "Acc": 87.73
+    }
+  ]
+}
