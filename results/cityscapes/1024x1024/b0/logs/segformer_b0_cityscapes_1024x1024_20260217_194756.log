@@ -1,0 +1,10 @@
+CFG : /workspace/mgr_segformer_playground/mmsegmentation/configs/segformer/segformer_mit-b0_8xb1-160k_cityscapes-1024x1024.py
+CKPT: /workspace/mgr_segformer_playground/data/trained_models/segformer_mit-b0_8x1_1024x1024_160k_cityscapes_20211208_101857-e7f88502.pth
+OUT : /workspace/mgr_segformer_playground/results/cityscapes/1024x1024/b0
+usage: test.py [-h] [--work-dir WORK_DIR] [--out OUT] [--show]
+               [--show-dir SHOW_DIR] [--wait-time WAIT_TIME]
+               [--cfg-options CFG_OPTIONS [CFG_OPTIONS ...]]
+               [--launcher {none,pytorch,slurm,mpi}] [--tta]
+               [--local_rank LOCAL_RANK]
+               config checkpoint
+test.py: error: argument --cfg-options: expected at least one argument
