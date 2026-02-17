@@ -15,18 +15,14 @@ class SegFormerConvHead(SegformerHead):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
-        out_ch = self.channels  # embed dim used by cls_seg
+        # ile kanałów ma concat w Twojej wersji headu
+        in_ch = self.fusion_conv.conv.in_channels
+        out_ch = self.channels
 
-        # 1x1 (lazy in_channels) -> DW 3x3 -> 1x1
-        self.fuse_conv1 = nn.LazyConv2d(out_ch, kernel_size=1, bias=False)
-
-        # norm/act around lazy conv (keep simple & robust)
-        # Use the same norm type as in the base head via ConvModule for later blocks.
-        # For the first block we add BN+ReLU explicitly.
-        # NOTE: If you use SyncBN on 1 GPU, it still works but BN is fine too.
-        self.fuse_bn1 = nn.BatchNorm2d(out_ch)
-        self.fuse_act1 = nn.ReLU(inplace=True)
-
+        self.fuse_conv1 = ConvModule(
+            in_ch, out_ch, kernel_size=1,
+            norm_cfg=self.norm_cfg, act_cfg=dict(type='ReLU')
+        )
         self.fuse_dwconv = ConvModule(
             out_ch, out_ch, kernel_size=3, padding=1, groups=out_ch,
             norm_cfg=self.norm_cfg, act_cfg=dict(type='ReLU')
