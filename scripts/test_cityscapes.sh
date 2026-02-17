@@ -55,10 +55,16 @@ if [[ "$VIS_N" -gt 0 ]]; then
   SHOW_ARGS=(--show-dir "$VISDIR")
 fi
 
-python tools/test.py "$CFG" "$CKPT" \
-  "${SHOW_ARGS[@]}" \
-  --cfg-options "${CFG_OPTS[@]}" \
-  2>&1 | tee -a "$LOG"
+if [ ${#CFG_OPTS[@]} -eq 0 ]; then
+  python tools/test.py "$CFG" "$CKPT" \
+    "${SHOW_ARGS[@]}" \
+    2>&1 | tee -a "$LOG"
+else
+  python tools/test.py "$CFG" "$CKPT" \
+    "${SHOW_ARGS[@]}" \
+    --cfg-options "${CFG_OPTS[@]}" \
+    2>&1 | tee -a "$LOG"
+fi
 
 # Parse metryki do JSON/CSV
 python "$ROOT/scripts/parse_mmseg_log.py" "$LOG" "$METDIR/${RUN_ID}.json" "$METDIR/${RUN_ID}.csv"
