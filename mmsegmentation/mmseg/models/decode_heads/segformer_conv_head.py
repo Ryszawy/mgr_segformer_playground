@@ -1,5 +1,4 @@
 import torch
-import torch.nn as nn
 from mmcv.cnn import ConvModule
 from mmseg.registry import MODELS
 from mmseg.models.utils import resize
@@ -8,14 +7,11 @@ from .segformer_head import SegformerHead
 
 @MODELS.register_module()
 class SegFormerConvHead(SegformerHead):
-    """SegFormer head with conv-based fusion replacing fusion_conv.
-    Uses LazyConv2d to infer concat channel dim at runtime (version-robust).
-    """
+    """Conv-based fusion replacing fusion_conv in SegformerHead."""
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
-        # ile kanałów ma concat w Twojej wersji headu
         in_ch = self.fusion_conv.conv.in_channels
         out_ch = self.channels
 
@@ -49,11 +45,7 @@ class SegFormerConvHead(SegformerHead):
 
         x = torch.cat(outs, dim=1)
 
-        # Lazy 1x1 + BN + ReLU
         x = self.fuse_conv1(x)
-        x = self.fuse_bn1(x)
-        x = self.fuse_act1(x)
-
         x = self.fuse_dwconv(x)
         x = self.fuse_conv2(x)
 
