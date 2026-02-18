@@ -1,0 +1,30 @@
+metric,value
+mIoU,60.73
+mAcc,70.2
+aAcc,93.75
+avg_time_per_iter_s,0.052199999999999996
+median_time_per_iter_s,0.052199999999999996
+avg_fps_batch1,19.157088122605366
+median_fps_batch1,19.157088122605366
+peak_mem_mb,1137
+
+class,IoU,Acc
+road,96.82,98.08
+sidewalk,76.71,87.62
+building,88.68,94.88
+wall,47.44,55.39
+fence,38.59,68.29
+pole,47.4,53.18
+traffic light,53.78,63.02
+traffic sign,65.92,73.6
+vegetation,90.72,95.88
+terrain,56.02,66.99
+sky,93.1,96.39
+person,70.76,87.68
+rider,38.15,48.38
+car,90.43,95.14
+truck,44.02,49.72
+bus,53.79,75.57
+train,7.3,8.47
+motorcycle,28.58,29.88
+bicycle,65.62,85.64
