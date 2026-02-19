@@ -11,7 +11,7 @@ model = dict(
         # MiT-B0 stage channels
         in_channels=[32, 64, 160, 256],
         in_index=[0, 1, 2, 3],
-
+        input_transform='multiple_select',
         channels=256,
         dropout_ratio=0.1,
         num_classes=19,  # Cityscapes
