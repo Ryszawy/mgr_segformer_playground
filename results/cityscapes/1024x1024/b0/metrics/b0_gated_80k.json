@@ -1,0 +1,109 @@
+{
+  "log": "mmsegmentation/work_dirs/b0_gated_80k/test_80k.log",
+  "aAcc": 95.0,
+  "mIoU": 70.49,
+  "mAcc": 79.93,
+  "avg_time_per_iter_s": 0.05467,
+  "median_time_per_iter_s": 0.0546,
+  "avg_data_time_s": 0.00745,
+  "avg_fps_batch1": 18.291567587342236,
+  "median_fps_batch1": 18.315018315018314,
+  "peak_mem_mb": 1136,
+  "per_class": [
+    {
+      "class": "road",
+      "IoU": 97.52,
+      "Acc": 98.55
+    },
+    {
+      "class": "sidewalk",
+      "IoU": 80.91,
+      "Acc": 89.87
+    },
+    {
+      "class": "building",
+      "IoU": 90.46,
+      "Acc": 95.81
+    },
+    {
+      "class": "wall",
+      "IoU": 57.25,
+      "Acc": 65.23
+    },
+    {
+      "class": "fence",
+      "IoU": 49.41,
+      "Acc": 61.74
+    },
+    {
+      "class": "pole",
+      "IoU": 52.78,
+      "Acc": 61.56
+    },
+    {
+      "class": "traffic light",
+      "IoU": 60.49,
+      "Acc": 72.4
+    },
+    {
+      "class": "traffic sign",
+      "IoU": 70.17,
+      "Acc": 77.57
+    },
+    {
+      "class": "vegetation",
+      "IoU": 91.58,
+      "Acc": 96.66
+    },
+    {
+      "class": "terrain",
+      "IoU": 60.6,
+      "Acc": 68.15
+    },
+    {
+      "class": "sky",
+      "IoU": 94.33,
+      "Acc": 97.6
+    },
+    {
+      "class": "person",
+      "IoU": 75.58,
+      "Acc": 87.83
+    },
+    {
+      "class": "rider",
+      "IoU": 48.85,
+      "Acc": 64.35
+    },
+    {
+      "class": "car",
+      "IoU": 92.84,
+      "Acc": 96.58
+    },
+    {
+      "class": "truck",
+      "IoU": 75.35,
+      "Acc": 85.4
+    },
+    {
+      "class": "bus",
+      "IoU": 70.46,
+      "Acc": 84.05
+    },
+    {
+      "class": "train",
+      "IoU": 44.36,
+      "Acc": 63.68
+    },
+    {
+      "class": "motorcycle",
+      "IoU": 55.15,
+      "Acc": 65.19
+    },
+    {
+      "class": "bicycle",
+      "IoU": 71.26,
+      "Acc": 86.51
+    }
+  ]
+}
