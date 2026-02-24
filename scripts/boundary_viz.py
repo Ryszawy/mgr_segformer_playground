@@ -10,6 +10,7 @@ from mmseg.utils import register_all_modules
 from mmseg.apis import init_model, inference_model
 from mmseg.registry import DATASETS, DATA_SAMPLERS
 from torch.utils.data import DataLoader
+from mmengine.dataset import pseudo_collate
 
 
 # -----------------------------
@@ -30,7 +31,6 @@ def overlay_edges(img, edges, color):
 
 # -----------------------------
 def build_dataloader(cfg):
-    # prefer test_dataloader, fallback val_dataloader
     dl_cfg = getattr(cfg, "test_dataloader", None) or getattr(cfg, "val_dataloader", None)
     if dl_cfg is None:
         raise RuntimeError("No test_dataloader or val_dataloader in config.")
@@ -46,10 +46,10 @@ def build_dataloader(cfg):
         batch_size=dl_cfg.get("batch_size", 1),
         sampler=sampler,
         num_workers=dl_cfg.get("num_workers", 2),
-        persistent_workers=False,
-        collate_fn=dataset.collate_fn
+        persistent_workers=bool(dl_cfg.get("persistent_workers", False)) and dl_cfg.get("num_workers", 2) > 0,
+        collate_fn=pseudo_collate,   # <-- zamiast dataset.collate_fn
+        drop_last=False,
     )
-
     return dataloader
 
 
