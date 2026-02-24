@@ -8,6 +8,8 @@ from mmengine.config import Config
 from mmengine.runner import Runner
 from mmseg.utils import register_all_modules
 from mmseg.apis import init_model, inference_model
+from mmseg.registry import DATASETS, DATA_SAMPLERS
+from torch.utils.data import DataLoader
 
 
 # -----------------------------
@@ -28,16 +30,27 @@ def overlay_edges(img, edges, color):
 
 # -----------------------------
 def build_dataloader(cfg):
+    # prefer test_dataloader, fallback val_dataloader
     dl_cfg = getattr(cfg, "test_dataloader", None) or getattr(cfg, "val_dataloader", None)
-    runner_cfg = dict(
-        model=cfg.model,
-        work_dir="./.tmp_boundary",
-        test_dataloader=dl_cfg,
-        test_cfg=getattr(cfg, "test_cfg", dict(type="TestLoop")),
-        default_scope="mmseg",
+    if dl_cfg is None:
+        raise RuntimeError("No test_dataloader or val_dataloader in config.")
+
+    dataset_cfg = dl_cfg["dataset"]
+    dataset = DATASETS.build(dataset_cfg)
+
+    sampler_cfg = dl_cfg.get("sampler", dict(type="DefaultSampler", shuffle=False))
+    sampler = DATA_SAMPLERS.build(sampler_cfg, default_args=dict(dataset=dataset))
+
+    dataloader = DataLoader(
+        dataset,
+        batch_size=dl_cfg.get("batch_size", 1),
+        sampler=sampler,
+        num_workers=dl_cfg.get("num_workers", 2),
+        persistent_workers=False,
+        collate_fn=dataset.collate_fn
     )
-    runner = Runner.from_cfg(Config(runner_cfg))
-    return runner.test_dataloader
+
+    return dataloader
 
 
 # -----------------------------
