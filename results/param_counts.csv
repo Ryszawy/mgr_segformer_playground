@@ -1,0 +1,9 @@
+config,model_params,model_params_m,head_params,head_params_m
+configs/segformer/segformer_mit-b0_8xb1-160k_cityscapes-1024x1024.py,3720051,3.720051,400659,0.400659
+configs/segformer_exp/segformer_mit-b0_convhead_160k_cityscapes-1024x1024.py,4051571,4.051571,732179,0.732179,262656,0.262656,2816,0.002816,66048,0.066048
+configs/segformer_rnn/segformer_mit-b0_rnnB1_160k_cityscapes-1024x1024.py,3901299,3.901299,581907,0.581907
+configs/segformer_gate/segformer_mit-b0_gated_160k_cityscapes-1024x1024.py,3786103,3.786103,466711,0.466711
+configs/segformer/segformer_mit-b2_8xb1-160k_cityscapes-1024x1024.py,24728019,24.728019,531731,0.531731
+configs/segformer_gate/segformer_mit-b2_gated_160k_cityscapes-1024x1024.py,24794071,24.794071,597783,0.597783
+configs/segformer/segformer_mit-b3_8xb1-160k_cityscapes-1024x1024.py,44603859,44.603859,531731,0.531731
+configs/segformer_gate/segformer_mit-b3_gated_160k_cityscapes-1024x1024.py,44669911,44.669911,597783,0.597783
