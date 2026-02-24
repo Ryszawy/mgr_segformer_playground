@@ -1,0 +1,11 @@
+# B0
+B0 Baseline,configs/segformer/segformer_mit-b0_8xb1-160k_cityscapes-1024x1024.py,work_dirs/b0_baseline_160k/iter_160000.pth
+B0 Conv,configs/segformer_exp/segformer_mit-b0_convhead_160k_cityscapes-1024x1024.py,work_dirs/b0_convhead_160k/iter_160000.pth
+B0 RNN,configs/segformer_rnn/segformer_mit-b0_rnnB1_160k_cityscapes-1024x1024.py,work_dirs/b0_rnnB1_160k/iter_160000.pth
+B0 Gated,configs/segformer_gate/segformer_mit-b0_gated_160k_cityscapes-1024x1024.py,work_dirs/b0_gated_160k/iter_160000.pth
+
+# B2/B3
+B2 Baseline,configs/segformer/segformer_mit-b2_8xb1-160k_cityscapes-1024x1024.py,work_dirs/b2_baseline_160k/iter_160000.pth
+B2 Gated,configs/segformer_gate/segformer_mit-b2_gated_160k_cityscapes-1024x1024.py,work_dirs/b2_gated_160k/iter_160000.pth
+B3 Baseline,configs/segformer/segformer_mit-b3_8xb1-160k_cityscapes-1024x1024.py,work_dirs/b3_baseline_160k/iter_160000.pth
+B3 Gated,configs/segformer_gate/segformer_mit-b3_gated_160k_cityscapes-1024x1024.py,work_dirs/b3_gated_160k/iter_160000.pth
