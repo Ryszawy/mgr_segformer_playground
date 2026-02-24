@@ -19,6 +19,9 @@ def main():
     import mmseg  # rejestracje
     from mmengine.config import Config
     from mmseg.registry import MODELS
+    from mmseg.utils import register_all_modules
+
+    register_all_modules()
 
     cfg = Config.fromfile(cfg_path)
     model = MODELS.build(cfg.model)
