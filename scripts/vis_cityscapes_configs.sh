@@ -63,7 +63,8 @@ for entry in "${RUNS[@]}"; do
   # --show-dir writes overlay visualizations for the val set
   python tools/test.py "$CFG" "$CKPT" \
     --show-dir "$VISDIR" \
-    --cfg-options model.test_cfg.mode=whole \
+    --cfg-options \
+        model.test_cfg.mode=whole \
         visualizer.draw_gt=False \
         visualizer.draw_pred=True \
         visualizer.show=False \
