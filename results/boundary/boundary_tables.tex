@@ -1,0 +1,34 @@
+\begin{table}[H]
+\centering
+\caption{Metryki jakości granic obiektów na zbiorze walidacyjnym Cityscapes: Boundary F1 oraz Boundary IoU (pas tolerancji $w$).}
+\label{tab:boundary_metrics}
+\begin{tabular}{lcccc}
+\toprule
+Model & BF1 $\uparrow$ & 95\% CI & BIoU $\uparrow$ & 95\% CI \\
+\midrule
+B0 Baseline & 0.7073 & [0.7002,0.7144] & 0.2001 & [0.1973,0.2028] \\
+B0 Conv & 0.7114 & [0.7039,0.7190] & 0.2049 & [0.2021,0.2077] \\
+B0 RNN & 0.6393 & [0.6326,0.6460] & 0.1425 & [0.1405,0.1445] \\
+B0 Gated & 0.7037 & [0.6966,0.7108] & 0.1950 & [0.1922,0.1978] \\
+B2 Baseline & 0.7597 & [0.7527,0.7668] & 0.2250 & [0.2219,0.2281] \\
+B2 Gated & 0.7528 & [0.7453,0.7603] & 0.2204 & [0.2172,0.2236] \\
+B3 Baseline & 0.7670 & [0.7601,0.7739] & 0.2256 & [0.2224,0.2287] \\
+B3 Gated & 0.7680 & [0.7611,0.7749] & 0.2266 & [0.2235,0.2297] \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[H]
+\centering
+\caption{Porównanie parowane (te same obrazy): różnice $\Delta$ (B - A) oraz statystyka testu parowanego.}
+\label{tab:boundary_paired}
+\begin{tabular}{lccccc}
+\toprule
+Para (A vs B) & $\Delta$BF1 & $t$ & $p$ & $\Delta$BIoU & $t$ \\
+\midrule
+B0 Baseline vs B0 Gated & -0.0036 & -4.19 & 2.8e-05 & -0.0051 & -12.46 \\
+B2 Baseline vs B2 Gated & -0.0069 & -7.80 & 6.44e-15 & -0.0046 & -11.34 \\
+B3 Baseline vs B3 Gated & +0.0011 & 1.36 & 0.173 & +0.0010 & 2.61 \\
+\bottomrule
+\end{tabular}
+\end{table}
