@@ -16,9 +16,8 @@ TRAIN_LINE_NOACC = re.compile(
     r"Iter\(train\)\s*\[\s*(\d+)\s*/\s*(\d+)\].*?\bloss:\s*([0-9]*\.?[0-9]+)"
 )
 
-VAL_ITER_LINE = re.compile(
-    r"Iter\(val\)\s*\[\s*(\d+)\s*/\s*(\d+)\]"
-)
+TRAIN_ITER_LINE = re.compile(r"Iter\(train\)\s*\[\s*(\d+)\s*/\s*(\d+)\]")
+VAL_PROGRESS_LINE = re.compile(r"Iter\(val\)\s*\[\s*(\d+)\s*/\s*(\d+)\]")
 MIOU_LINE = re.compile(r"\bmIoU:\s*([0-9]*\.?[0-9]+)")
 AACC_LINE = re.compile(r"\baAcc:\s*([0-9]*\.?[0-9]+)")
 MACC_LINE = re.compile(r"\bmAcc:\s*([0-9]*\.?[0-9]+)")
