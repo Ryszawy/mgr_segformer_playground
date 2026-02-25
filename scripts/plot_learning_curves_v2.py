@@ -148,26 +148,51 @@ def plot_single(train_df, val_df, out_dir: Path, title: str, smooth_win: int, wi
 
 def plot_with_errorbars(val_dfs: list[pd.DataFrame], labels: list[str], out_dir: Path, title: str, wide: bool):
     """
-    Mean ± std mIoU po wielu runach (workdirach) dopasowanych po iter.
+    Mean ± std mIoU po wielu krzywych (dopasowanie po iter).
+    Uwaga: statystycznie sensowne dla wielu seedów tego samego eksperymentu,
+    ale może być użyte też jako wizualizacja rozrzutu między wariantami.
     """
     out_dir.mkdir(parents=True, exist_ok=True)
     figsize = (14, 4) if wide else (6, 4)
 
-    # scal po iter: kolumny mIoU_0, mIoU_1...
     merged = None
     for i, df in enumerate(val_dfs):
-        tmp = df[["iter", "mIoU"]].rename(columns={"mIoU": f"mIoU_{i}"})
+        if df is None or df.empty:
+            continue
+        tmp = df[["iter", "mIoU"]].copy()
+
+        # Wymuś typy numeryczne (kluczowe dla fill_between)
+        tmp["iter"] = pd.to_numeric(tmp["iter"], errors="coerce")
+        tmp["mIoU"] = pd.to_numeric(tmp["mIoU"], errors="coerce")
+        tmp = tmp.dropna(subset=["iter", "mIoU"])
+
+        tmp = tmp.rename(columns={"mIoU": f"mIoU_{i}"})
         merged = tmp if merged is None else merged.merge(tmp, on="iter", how="outer")
+
+    if merged is None or merged.empty:
+        raise RuntimeError("Brak danych walidacyjnych do porównania (val_dfs puste lub bez mIoU).")
 
     merged = merged.sort_values("iter")
     miou_cols = [c for c in merged.columns if c.startswith("mIoU_")]
 
-    mean = merged[miou_cols].mean(axis=1, skipna=True)
-    std = merged[miou_cols].std(axis=1, skipna=True)
+    # mean/std po wierszach (iter)
+    mean = merged[miou_cols].astype(float).mean(axis=1, skipna=True)
+    std = merged[miou_cols].astype(float).std(axis=1, skipna=True)
+
+    # Wymuś floaty dla matplotlib
+    x = pd.to_numeric(merged["iter"], errors="coerce").astype(float)
+    mean = pd.to_numeric(mean, errors="coerce").astype(float)
+    std = pd.to_numeric(std, errors="coerce").astype(float)
+
+    # Usuń NaN
+    mask = x.notna() & mean.notna() & std.notna()
+    x = x[mask]
+    mean = mean[mask]
+    std = std[mask]
 
     plt.figure(figsize=figsize)
-    plt.plot(merged["iter"], mean, marker="o")
-    plt.fill_between(merged["iter"], mean - std, mean + std, alpha=0.2)
+    plt.plot(x, mean, marker="o")
+    plt.fill_between(x, mean - std, mean + std, alpha=0.2)
     plt.xlabel("Iteration")
     plt.ylabel("mIoU")
     plt.title(f"{title} — Validation mIoU (mean ± std)")
@@ -177,8 +202,8 @@ def plot_with_errorbars(val_dfs: list[pd.DataFrame], labels: list[str], out_dir:
     plt.close()
 
     merged_out = merged.copy()
-    merged_out["mIoU_mean"] = mean
-    merged_out["mIoU_std"] = std
+    merged_out["mIoU_mean"] = mean.reindex(merged.index)
+    merged_out["mIoU_std"] = std.reindex(merged.index)
     merged_out.to_csv(out_dir / "val_miou_mean_std.csv", index=False)
 
 
