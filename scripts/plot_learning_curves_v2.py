@@ -51,45 +51,71 @@ def parse_mmengine_log(log_path: Path):
     val = []
 
     pending_val_iter = None
+    last_train_iter = None
     max_iters = None
+    val_interval = None
+
+    # wyciągnij val_interval z logu (np. "val_interval=16000")
+    val_int_pat = re.compile(r"val_interval\s*=\s*(\d+)")
+    train_pat = TRAIN_LINE
+    train_pat_noacc = TRAIN_LINE_NOACC
 
     with open(log_path, "r", errors="ignore") as f:
         for line in f:
+            mi = val_int_pat.search(line)
+            if mi and val_interval is None:
+                val_interval = int(mi.group(1))
+
             # TRAIN
-            m = TRAIN_LINE.search(line)
+            m = train_pat.search(line)
             if m:
                 it = int(m.group(1))
+                last_train_iter = it
                 max_iters = int(m.group(2))
                 loss = float(m.group(3))
                 acc = float(m.group(4))
                 train.append((it, loss, acc))
                 continue
 
-            m = TRAIN_LINE_NOACC.search(line)
+            m = train_pat_noacc.search(line)
             if m:
                 it = int(m.group(1))
+                last_train_iter = it
                 max_iters = int(m.group(2))
                 loss = float(m.group(3))
                 train.append((it, loss, None))
                 continue
 
-            # VAL: najpierw linia Iter(val) -> zapamiętaj iter
-            m = VAL_ITER_LINE.search(line)
-            if m:
-                pending_val_iter = int(m.group(1))
-                max_iters = int(m.group(2))
+            # jeśli jest Iter(val) — zapamiętaj iter
+            mv = VAL_ITER_LINE.search(line)
+            if mv:
+                pending_val_iter = int(mv.group(1))
+                max_iters = int(mv.group(2))
                 continue
 
-            # a potem w bloku wyników: mIoU/aAcc/mAcc
-            if pending_val_iter is not None:
-                mm = MIOU_LINE.search(line)
-                if mm:
-                    miou = float(mm.group(1))
-                    aacc = float(AACC_LINE.search(line).group(1)) if AACC_LINE.search(line) else None
-                    macc = float(MACC_LINE.search(line).group(1)) if MACC_LINE.search(line) else None
-                    val.append((pending_val_iter, miou, aacc, macc))
-                    pending_val_iter = None  # zużyte
-                    continue
+            # jeśli pojawia się mIoU w bloku wyników:
+            mm = MIOU_LINE.search(line)
+            if mm:
+                miou = float(mm.group(1))
+                aacc = float(AACC_LINE.search(line).group(1)) if AACC_LINE.search(line) else None
+                macc = float(MACC_LINE.search(line).group(1)) if MACC_LINE.search(line) else None
+
+                # 1) preferuj Iter(val)
+                it_val = pending_val_iter
+
+                # 2) jeśli brak Iter(val), przypisz do ostatniej iteracji train
+                if it_val is None and last_train_iter is not None:
+                    it_val = last_train_iter
+
+                    # 3) jeśli znamy val_interval, zaokrąglij do najbliższego wielokrotności
+                    if val_interval:
+                        it_val = int(round(it_val / val_interval) * val_interval)
+
+                if it_val is not None:
+                    val.append((it_val, miou, aacc, macc))
+
+                pending_val_iter = None
+                continue
 
     train_df = pd.DataFrame(train, columns=["iter", "loss", "acc_seg"]).drop_duplicates("iter").sort_values("iter")
     val_df = pd.DataFrame(val, columns=["iter", "mIoU", "aAcc", "mAcc"]).drop_duplicates("iter").sort_values("iter")
