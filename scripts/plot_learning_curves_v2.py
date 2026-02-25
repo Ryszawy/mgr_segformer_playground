@@ -44,6 +44,42 @@ def find_log(run_dir: Path) -> Path:
         return logs[0]
     raise FileNotFoundError(f"Brak *.log w {run_dir}")
 
+def plot_multiple_miou_curves(val_dfs: list[pd.DataFrame], labels: list[str],
+                              out_dir: Path, title: str, wide: bool):
+    """
+    Rysuje wiele krzywych mIoU (osobna linia na model) vs iter treningu.
+    """
+    out_dir.mkdir(parents=True, exist_ok=True)
+    figsize = (14, 4) if wide else (7, 4)
+
+    plt.figure(figsize=figsize)
+
+    any_plotted = False
+    for df, lab in zip(val_dfs, labels):
+        if df is None or df.empty:
+            continue
+        tmp = df[["iter", "mIoU"]].copy()
+        tmp["iter"] = pd.to_numeric(tmp["iter"], errors="coerce")
+        tmp["mIoU"] = pd.to_numeric(tmp["mIoU"], errors="coerce")
+        tmp = tmp.dropna(subset=["iter", "mIoU"]).sort_values("iter")
+        if tmp.empty:
+            continue
+
+        plt.plot(tmp["iter"], tmp["mIoU"], marker="o", label=lab)
+        any_plotted = True
+
+    if not any_plotted:
+        raise RuntimeError("Brak danych mIoU do narysowania (wszystkie val_df puste).")
+
+    plt.xlabel("Iteration")
+    plt.ylabel("mIoU")
+    plt.title(f"{title} — Validation mIoU (per model)")
+    plt.grid(True)
+    plt.legend(loc="lower right", frameon=True)
+    plt.tight_layout()
+    plt.savefig(out_dir / "val_miou_compare.png", dpi=200)
+    plt.close()
+
 
 def parse_mmengine_log(log_path: Path):
     train = []
@@ -215,6 +251,8 @@ def main():
     ap.add_argument("--name", default=None, help="Nazwa do tytułów/wykresów (domyślnie: nazwa work_dir lub 'comparison').")
     ap.add_argument("--smooth", type=int, default=1, help="Okno wygładzania dla train (rolling mean).")
     ap.add_argument("--wide", action="store_true", help="Szerokie wykresy (14x4).")
+    ap.add_argument("--mode", choices=["lines", "meanstd"], default="lines",
+                    help="lines: osobne krzywe dla każdego work-dir; meanstd: średnia±std")
     args = ap.parse_args()
 
     work_dirs = [Path(p).resolve() for p in args.work_dir]
@@ -245,7 +283,7 @@ def main():
         print(f"  val pts: {len(val_df)}")
         return
 
-    # wiele workdirów -> error bars na walidacji
+   # wiele workdirów -> porównanie krzywych lub mean±std
     val_dfs = []
     labels = []
     for wd in work_dirs:
@@ -257,9 +295,18 @@ def main():
 
     comp_name = args.name or "comparison"
     out_dir = results_root / comp_name
-    plot_with_errorbars(val_dfs, labels, out_dir, comp_name, args.wide)
 
-    print("OK: comparison mean±std")
+    if args.mode == "lines":
+        plot_multiple_miou_curves(val_dfs, labels, out_dir, comp_name, args.wide)
+        # zapis pomocniczy do CSV
+        for lab, df in zip(labels, val_dfs):
+            if df is not None and not df.empty:
+                df.to_csv(out_dir / f"{lab}_val.csv", index=False)
+        print("OK: comparison lines")
+    else:
+        plot_with_errorbars(val_dfs, labels, out_dir, comp_name, args.wide)
+        print("OK: comparison mean±std")
+
     print(f"  out: {out_dir}")
     print("  work_dirs:", ", ".join(labels))
 
