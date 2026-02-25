@@ -16,6 +16,19 @@ TRAIN_LINE_NOACC = re.compile(
     r"Iter\(train\)\s*\[\s*(\d+)\s*/\s*(\d+)\].*?\bloss:\s*([0-9]*\.?[0-9]+)"
 )
 
+LEGEND_MAP = {
+    "b0_baseline_160k": "Bazowy Head",
+    "b0_gated_160k": "Wariant C (Gated)",
+    "b0_rnnB1_160k_v2": "Wariant B (RNN)",
+    "b0_convhead_160k_v2": "Wariant A (Conv)",
+
+    # jeśli będziesz używał też innych:
+    "segformer_mit-b0_8xb1-160k_cityscapes-1024x1024": "Base Head",
+    "segformer_mit-b0_gated_160k_cityscapes-1024x1024": "Head A (Gated)",
+    "segformer_mit-b0_rnnB1_160k_cityscapes-1024x1024": "Head B (RNN)",
+    "segformer_b0_convhead_160k": "Head C (Conv)",
+}
+
 TRAIN_ITER_LINE = re.compile(r"Iter\(train\)\s*\[\s*(\d+)\s*/\s*(\d+)\]")
 VAL_PROGRESS_LINE = re.compile(r"Iter\(val\)\s*\[\s*(\d+)\s*/\s*(\d+)\]")
 MIOU_LINE = re.compile(r"\bmIoU:\s*([0-9]*\.?[0-9]+)")
@@ -44,40 +57,47 @@ def find_log(run_dir: Path) -> Path:
         return logs[0]
     raise FileNotFoundError(f"Brak *.log w {run_dir}")
 
-def plot_multiple_miou_curves(val_dfs: list[pd.DataFrame], labels: list[str],
-                              out_dir: Path, title: str, wide: bool):
-    """
-    Rysuje wiele krzywych mIoU (osobna linia na model) vs iter treningu.
-    """
+def plot_multiple_miou_curves(val_dfs, labels, out_dir, title, wide):
     out_dir.mkdir(parents=True, exist_ok=True)
     figsize = (14, 4) if wide else (7, 4)
 
     plt.figure(figsize=figsize)
 
     any_plotted = False
-    for df, lab in zip(val_dfs, labels):
+    for df, raw_label in zip(val_dfs, labels):
         if df is None or df.empty:
             continue
+
         tmp = df[["iter", "mIoU"]].copy()
         tmp["iter"] = pd.to_numeric(tmp["iter"], errors="coerce")
         tmp["mIoU"] = pd.to_numeric(tmp["mIoU"], errors="coerce")
         tmp = tmp.dropna(subset=["iter", "mIoU"]).sort_values("iter")
+
         if tmp.empty:
             continue
 
-        plt.plot(tmp["iter"], tmp["mIoU"], marker="o", label=lab)
+        # 🔹 mapowanie nazwy do legendy
+        label = LEGEND_MAP.get(raw_label, raw_label)
+
+        plt.plot(
+            tmp["iter"],
+            tmp["mIoU"],
+            marker="o",
+            linewidth=2,
+            label=label
+        )
         any_plotted = True
 
     if not any_plotted:
-        raise RuntimeError("Brak danych mIoU do narysowania (wszystkie val_df puste).")
+        raise RuntimeError("Brak danych mIoU do narysowania.")
 
-    plt.xlabel("Iteration")
+    plt.xlabel("Iteracja")
     plt.ylabel("mIoU")
-    plt.title(f"{title} — Validation mIoU (per model)")
-    plt.grid(True)
+    plt.title("Walidacyjna wartość mIoU dla różnych wariantów dekodera (SegFormer-B0)")
+    plt.grid(True, alpha=0.4)
     plt.legend(loc="lower right", frameon=True)
     plt.tight_layout()
-    plt.savefig(out_dir / "val_miou_compare.png", dpi=200)
+    plt.savefig(out_dir / "val_miou_compare.png", dpi=300)
     plt.close()
 
 
