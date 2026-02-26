@@ -1,20 +1,19 @@
 #!/usr/bin/env python3
-"""
-torchinfo_summary_mmseg_head.py
-"""
-
 import argparse
 import sys
+from pathlib import Path
 from typing import List, Tuple
 
+# --- FORCE local repo mmseg + initialize registries ---
+REPO_ROOT = Path(__file__).resolve().parents[1] / "mmsegmentation"
+sys.path.insert(0, str(REPO_ROOT))
+
+from mmseg.utils import register_all_modules
+register_all_modules(init_default_scope=True)
+
 import torch
-
-# --- WAŻNE: wymusza rejestrację komponentów MMSeg (m.in. SegDataPreProcessor) ---
-import mmseg  # noqa: F401
-import mmseg.models  # noqa: F401
-import mmseg.datasets  # noqa: F401
-
 from mmengine.config import Config
+from mmengine.utils import import_modules_from_strings
 from mmseg.registry import MODELS
 from torchinfo import summary
 
@@ -30,27 +29,25 @@ MIT_IN_CHANNELS = {
 
 
 def _try_get_in_channels_from_cfg(cfg: Config) -> List[int] | None:
-    try:
-        head = cfg.model.get("decode_head", None)
-        if head is None:
-            return None
-        in_ch = head.get("in_channels", None)
-        if isinstance(in_ch, (list, tuple)) and len(in_ch) == 4:
-            return list(map(int, in_ch))
+    head = cfg.model.get("decode_head", None)
+    if not head:
         return None
-    except Exception:
-        return None
+    in_ch = head.get("in_channels", None)
+    if isinstance(in_ch, (list, tuple)) and len(in_ch) == 4:
+        return list(map(int, in_ch))
+    return None
 
 
 def _make_head_inputs(in_channels: List[int], hw: Tuple[int, int], batch: int = 1):
     H, W = hw
     if H % 32 != 0 or W % 32 != 0:
         raise ValueError(f"--hw musi być podzielne przez 32, dostałem {H}x{W}")
-    x1 = torch.randn(batch, in_channels[0], H // 4,  W // 4)
-    x2 = torch.randn(batch, in_channels[1], H // 8,  W // 8)
-    x3 = torch.randn(batch, in_channels[2], H // 16, W // 16)
-    x4 = torch.randn(batch, in_channels[3], H // 32, W // 32)
-    return [x1, x2, x3, x4]
+    return [
+        torch.randn(batch, in_channels[0], H // 4,  W // 4),
+        torch.randn(batch, in_channels[1], H // 8,  W // 8),
+        torch.randn(batch, in_channels[2], H // 16, W // 16),
+        torch.randn(batch, in_channels[3], H // 32, W // 32),
+    ]
 
 
 def main():
@@ -66,18 +63,13 @@ def main():
 
     cfg = Config.fromfile(args.cfg)
 
-    # (opcjonalnie) jakby config miał custom_imports, to je aktywuj:
+    # jeśli masz własne heady i config ma custom_imports, to je dociągnij
     if "custom_imports" in cfg:
-        from mmengine.utils import import_modules_from_strings
         import_modules_from_strings(**cfg.custom_imports)
 
     model = MODELS.build(cfg.model).eval()
 
-    if args.in_ch is not None:
-        in_channels = list(args.in_ch)
-    else:
-        in_channels = _try_get_in_channels_from_cfg(cfg) or MIT_IN_CHANNELS[args.mit]
-
+    in_channels = list(args.in_ch) if args.in_ch else (_try_get_in_channels_from_cfg(cfg) or MIT_IN_CHANNELS[args.mit])
     inputs_4 = _make_head_inputs(in_channels, tuple(args.hw), batch=args.batch)
 
     if args.part == "head":
