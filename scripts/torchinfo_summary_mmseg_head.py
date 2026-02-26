@@ -2,7 +2,7 @@
 import argparse
 import sys
 from pathlib import Path
-from typing import List, Tuple, Dict, Any
+from typing import List, Tuple, Dict, Any, Optional
 
 # --- FORCE local repo mmseg + initialize registries ---
 REPO_ROOT = Path(__file__).resolve().parents[1] / "mmsegmentation"
@@ -28,7 +28,7 @@ MIT_IN_CHANNELS = {
 }
 
 
-def _try_get_in_channels_from_cfg(cfg: Config) -> List[int] | None:
+def _try_get_in_channels_from_cfg(cfg: Config) -> Optional[List[int]]:
     head = cfg.model.get("decode_head", None)
     if not head:
         return None
@@ -60,12 +60,23 @@ def _shape_of(x: Any):
     return str(type(x))
 
 
-def inspect_conv_io(module: torch.nn.Module, inputs, title: str):
+def _tuple2(x):
+    if x is None:
+        return None
+    if isinstance(x, tuple):
+        return tuple(x)
+    return (x, x)
+
+
+def inspect_ops_io(module: torch.nn.Module, inputs, title: str):
     """
-    Robi pojedynczy forward i wypisuje dla Conv/Pool/ConvTranspose:
-    - ścieżka modułu
-    - input/output shape
-    - kernel/stride/padding/dilation/groups (+ in/out channels)
+    Pojedynczy forward + hooks:
+      - Conv2d/ConvTranspose2d: kernel/stride/padding/dilation/groups + ch in/out
+      - Pool: kernel/stride/padding
+      - AdaptiveAvgPool2d: output_size
+      - Linear: in/out features
+      - GRU/LSTM: input_size/hidden_size/layers/bidirectional (+ shapes)
+    Dodatkowo numeruje wielokrotne wywołania tego samego modułu (np. gap#1..gap#4).
     """
     records: List[Dict[str, Any]] = []
     hooks = []
@@ -76,65 +87,95 @@ def inspect_conv_io(module: torch.nn.Module, inputs, title: str):
         torch.nn.MaxPool2d,
         torch.nn.AvgPool2d,
         torch.nn.AdaptiveAvgPool2d,
+        torch.nn.Linear,
+        torch.nn.GRU,
+        torch.nn.LSTM,
     )
 
-    def register_hooks():
-        name_by_id = {id(m): n for n, m in module.named_modules()}
+    # id(module) -> name (unikalne ścieżki z named_modules)
+    name_by_id = {id(m): n for n, m in module.named_modules()}
 
-        def hook_fn(m, inp, out):
-            rec: Dict[str, Any] = {
-                "name": name_by_id.get(id(m), m.__class__.__name__),
-                "type": m.__class__.__name__,
-                "in_shape": _shape_of(inp[0] if len(inp) == 1 else inp),
-                "out_shape": _shape_of(out),
-            }
-            # Conv-like params
-            if isinstance(m, (torch.nn.Conv2d, torch.nn.ConvTranspose2d)):
-                rec.update({
-                    "in_ch": m.in_channels,
-                    "out_ch": m.out_channels,
-                    "kernel": tuple(m.kernel_size) if isinstance(m.kernel_size, tuple) else (m.kernel_size, m.kernel_size),
-                    "stride": tuple(m.stride) if isinstance(m.stride, tuple) else (m.stride, m.stride),
-                    "padding": tuple(m.padding) if isinstance(m.padding, tuple) else (m.padding, m.padding),
-                    "dilation": tuple(m.dilation) if isinstance(m.dilation, tuple) else (m.dilation, m.dilation),
-                    "groups": m.groups,
-                })
-            elif isinstance(m, (torch.nn.MaxPool2d, torch.nn.AvgPool2d)):
-                # kernel/stride/padding mogą być int albo tuple
-                k = m.kernel_size
-                s = m.stride
-                p = m.padding
-                rec.update({
-                    "kernel": tuple(k) if isinstance(k, tuple) else (k, k),
-                    "stride": tuple(s) if isinstance(s, tuple) else (s, s) if s is not None else None,
-                    "padding": tuple(p) if isinstance(p, tuple) else (p, p),
-                })
-            elif isinstance(m, torch.nn.AdaptiveAvgPool2d):
-                rec.update({"output_size": m.output_size})
-            records.append(rec)
+    # żeby numerować wywołania tego samego modułu
+    call_count_by_id: Dict[int, int] = {}
 
-        for n, m in module.named_modules():
-            if isinstance(m, wanted):
-                hooks.append(m.register_forward_hook(hook_fn))
+    def hook_fn(m, inp, out):
+        mid = id(m)
+        call_count_by_id[mid] = call_count_by_id.get(mid, 0) + 1
+        call_idx = call_count_by_id[mid]
 
-    def cleanup():
-        for h in hooks:
-            h.remove()
+        base_name = name_by_id.get(mid, m.__class__.__name__)
+        name = f"{base_name}#{call_idx}" if call_idx > 1 else base_name
 
-    register_hooks()
+        # input może być krotką - bierz pierwszy argument jeśli jest jeden,
+        # a jeśli jest wiele, loguj całość (rzadkie przypadki)
+        in_obj = inp[0] if len(inp) == 1 else inp
+
+        rec: Dict[str, Any] = {
+            "name": name,
+            "type": m.__class__.__name__,
+            "in_shape": _shape_of(in_obj),
+            "out_shape": _shape_of(out),
+        }
+
+        if isinstance(m, (torch.nn.Conv2d, torch.nn.ConvTranspose2d)):
+            rec.update({
+                "in_ch": m.in_channels,
+                "out_ch": m.out_channels,
+                "kernel": _tuple2(m.kernel_size),
+                "stride": _tuple2(m.stride),
+                "padding": _tuple2(m.padding),
+                "dilation": _tuple2(m.dilation),
+                "groups": getattr(m, "groups", 1),
+            })
+
+        elif isinstance(m, (torch.nn.MaxPool2d, torch.nn.AvgPool2d)):
+            rec.update({
+                "kernel": _tuple2(m.kernel_size),
+                "stride": _tuple2(m.stride),
+                "padding": _tuple2(m.padding),
+            })
+
+        elif isinstance(m, torch.nn.AdaptiveAvgPool2d):
+            rec.update({"output_size": m.output_size})
+
+        elif isinstance(m, torch.nn.Linear):
+            rec.update({
+                "in_features": m.in_features,
+                "out_features": m.out_features,
+            })
+
+        elif isinstance(m, (torch.nn.GRU, torch.nn.LSTM)):
+            rec.update({
+                "input_size": m.input_size,
+                "hidden_size": m.hidden_size,
+                "num_layers": m.num_layers,
+                "batch_first": m.batch_first,
+                "bidirectional": m.bidirectional,
+            })
+
+        records.append(rec)
+
+    # register hooks
+    for n, m in module.named_modules():
+        if isinstance(m, wanted):
+            hooks.append(m.register_forward_hook(hook_fn))
+
+    # run forward
     module.eval()
     with torch.no_grad():
         if isinstance(inputs, dict):
             module(**inputs)
         else:
             module(*inputs) if isinstance(inputs, (list, tuple)) else module(inputs)
-    cleanup()
+
+    for h in hooks:
+        h.remove()
 
     # print
-    print(f"\n=== {title}: Conv/Pool details (with input/output shapes) ===")
+    print(f"\n=== {title}: ops details (Conv/Pool/Linear/RNN) with input/output shapes ===")
     for r in records:
-        # krótki, czytelny print pod pracę
         line = f"- {r['name']} [{r['type']}]: in={r['in_shape']} -> out={r['out_shape']}"
+
         if "kernel" in r:
             line += f", k={r.get('kernel')}, s={r.get('stride')}, p={r.get('padding')}"
         if "dilation" in r:
@@ -143,6 +184,12 @@ def inspect_conv_io(module: torch.nn.Module, inputs, title: str):
             line += f", ch={r.get('in_ch')}→{r.get('out_ch')}"
         if "output_size" in r:
             line += f", output_size={r['output_size']}"
+        if "in_features" in r:
+            line += f", feats={r['in_features']}→{r['out_features']}"
+        if "hidden_size" in r:
+            bi = "bi" if r.get("bidirectional") else "uni"
+            line += f", rnn({bi}, in={r['input_size']}, h={r['hidden_size']}, layers={r['num_layers']})"
+
         print(line)
 
 
@@ -155,12 +202,14 @@ def main():
     ap.add_argument("--part", choices=["head", "model"], default="head")
     ap.add_argument("--in-ch", nargs=4, type=int, default=None)
     ap.add_argument("--mit", choices=["b0", "b1", "b2", "b3", "b4", "b5"], default="b0")
-    ap.add_argument("--details", action="store_true",
-                    help="Dodatkowo wypisz kernel/stride/padding + input/output shapes dla Conv/Pool")
+    ap.add_argument(
+        "--details",
+        action="store_true",
+        help="Dodatkowo wypisz kernel/stride/padding + input/output shapes dla Conv/Pool/Linear/RNN",
+    )
     args = ap.parse_args()
 
     cfg = Config.fromfile(args.cfg)
-
     if "custom_imports" in cfg:
         import_modules_from_strings(**cfg.custom_imports)
 
@@ -174,12 +223,13 @@ def main():
         print(f"\n[torchinfo] cfg={args.cfg}")
         print(f"[torchinfo] part=decode_head, in_channels={in_channels}, hw={args.hw}, batch={args.batch}\n")
 
-        # UWAGA: żeby nie dublować wydruku: nie owijamy w print() przy verbose=1
+        # torchinfo
         summary(model.decode_head, input_data=[inputs_4], depth=args.depth, verbose=1)
 
+        # extra details
         if args.details:
             # decode_head przyjmuje listę 4 tensorów jako 1 argument
-            inspect_conv_io(model.decode_head, inputs=(inputs_4,), title="DECODE_HEAD")
+            inspect_ops_io(model.decode_head, inputs=(inputs_4,), title="DECODE_HEAD")
 
     else:
         H, W = args.hw
@@ -191,7 +241,7 @@ def main():
         summary(model, input_data=[dummy_img], depth=args.depth, verbose=1)
 
         if args.details:
-            inspect_conv_io(model, inputs=(dummy_img,), title="MODEL")
+            inspect_ops_io(model, inputs=(dummy_img,), title="MODEL")
 
 
 if __name__ == "__main__":
