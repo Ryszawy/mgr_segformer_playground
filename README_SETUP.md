@@ -59,6 +59,28 @@ If your clone lives elsewhere, adjust the hardcoded `ROOT=` values in:
 - `scripts/test_cityscapes.sh`
 - `scripts/vis_cityscapes_configs.sh`
 
+To prepare the expected directory tree on Linux/RunPod or on Windows, use:
+
+```bash
+./scripts/bootstrap_workspace.sh
+```
+
+or on Windows:
+
+```bat
+scripts\bootstrap_workspace.bat
+```
+
+Both scripts accept an optional target root directory, so you can also run them against a fresh clone or a separate local checkout.
+They create the same baseline tree for:
+
+- `data/cityscapes/`
+- `data/pretrained_models/`
+- `data/trained_models/`
+- `results/{boundary,clean_vis,dataset_browse,learning_curves,plots,cityscapes/1024x1024/vis}`
+- `work_dirs/`
+- `runpod_cmd/`
+
 ### 4.1 Clone the workspace
 
 If you are rebuilding from scratch, clone this thesis repo first:
